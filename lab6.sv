@@ -4,10 +4,10 @@ input [31:0] A, //address
 input [31:0] WD, //input data
 input WE, // write enable input
 output [31:0] RD, // output data
-output [31:0] probe // to check the data in data memory
+output [31:0] probe// to check the data in data memory
 );
 
-reg [255:0] mem[31:0];
+reg [31:0] mem[255:0] ;
 assign probe = mem[1];
 
 always_ff @(posedge clk or negedge rst) begin
@@ -157,23 +157,23 @@ input  clk, rst,
 input  [1:0] sw, //address for instruction memory
 output [31:0] ALUResult, //output for pre-lab simulation
 output [31:0] RD1, RD2, //output for pre-lab simulation
-output [31:0] probe_register_file, //output for pre-lab simulation
-output [6:0] display_led, //output for in-lab
+output [31:0] probe_register_file1,probe_register_fil2e, //output for pre-lab simulation
+output [6:0] display_led1,display_led2, //output for in-lab
 output [31:0] MemtoReg_out
 );
 
 
 wire[31:0] inst_0 = 32'b0;
-wire[31:0] inst_1 = 32'b100100_01000_00010_00001_0000_0000_000; 
+wire[31:0] inst_1 =  32'b010101_00000_01000_0000_0000_0000_0101; 
 //add rf_regs[5] and rf_regs[4] to rf_regs[1];
-wire[31:0] inst_2 = 32'b101100_01000_00011_00001_0000_0000_000; 
+wire[31:0] inst_2 =  32'b010100_00000_00000_0000_0000_0000_0010; 
 //sub rf_regs[10] - rf_regs[8] to rf_regs[1];
 wire[31:0] inst_ex;
 assign inst_ex = (sw==1)? inst_1:(sw==2)? inst_2: inst_0;
-
+wire [31:0]t_result, t_a3,t_srcb,t_Sign_imm;
 
 register_file r_f(.clk(clk),.rst(rst),
-.A1(inst_ex[25:21]),.A2(inst_ex[20:16]),.A3(inst_ex[15:11]),
+.A1(inst_ex[25:21]),.A2(inst_ex[20:16]),.A3(t_a3),
 .WD3(ALUResult),
 .WE3(1),
 .RD1(RD1),
@@ -183,11 +183,42 @@ register_file r_f(.clk(clk),.rst(rst),
 
 ALU t1(
 .SrcA(RD1),
-.SrcB(RD2),
+.SrcB(t_srcb),
 .ALUControl(inst_ex[29:27]),
 .ALUResult(ALUResult)
 );
 
-display t2(ALUResult, display_led);
+data_memory dm(
+.A(ALUResult),
+.WD(RD2),
+.WE(1),
+.RD(RD),
+.probe(probe_register_file)
+);
 
+MUX_MemtoReg mr(
+.MemtoReg(inst_ex[26]),
+.ALUResult(ALUResult),
+.RD(RD), 
+.MemtoReg_out
+);
+
+MUX_ALUSrc ma(
+.RD2(RD2),
+.SignImm(t_Sign_imm),
+.SrcB(t_srcb),
+.ALUSrc(inst_ex[30])
+);
+
+MUX_RegDst rdst(
+.rs(inst_ex[25:21]),
+.rd(inst_ex[15:11]),
+.RegDst(inst_ex[31]),
+.WriteReg(t_a3)
+);
+sign_extend(
+.Imm(inst_ex[15:0]),
+.SignImm(t_Sign_imm)
+);
+display seg1(ALUResult, display_led1);
 endmodule
